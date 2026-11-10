@@ -1,0 +1,1311 @@
+<!DOCTYPE html>
+<html lang="it" class="h-full bg-slate-950">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tombola Italiana Multiplayer</title>
+
+    <!-- TAILWIND CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        gold: '#fbbf24',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        fun: ['Fredoka', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- GOOGLE FONTS -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700&family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- FONT AWESOME ICONS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <!-- CANVAS CONFETTI FOR WINNERS -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+
+    <style>
+        /* Custom Styles & Glassmorphism */
+        body {
+            font-family: 'Inter', sans-serif;
+            background: radial-gradient(circle at top, #1e1b4b 0%, #0f172a 60%, #020617 100%);
+            color: #f8fafc;
+            min-height: 100vh;
+        }
+
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .tombola-number {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .tombola-number.extracted {
+            background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%) !important;
+            color: #ffffff !important;
+            border-color: #f59e0b !important;
+            box-shadow: 0 0 10px rgba(220, 38, 38, 0.6);
+            transform: scale(1.03);
+        }
+
+        .card-number.marked {
+            background: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
+            color: #ffffff !important;
+            border-color: #34d399 !important;
+            box-shadow: 0 0 8px rgba(5, 150, 105, 0.6);
+        }
+
+        /* Number Ball Animation */
+        @keyframes pulse-ring {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 12px rgba(239, 68, 68, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+        .pulse-ball {
+            animation: pulse-ring 2s infinite;
+        }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen text-slate-100 antialiased selection:bg-red-500 selection:text-white">
+
+    <!-- HEADER / BARRA SUPERIORE -->
+    <header class="w-full glass-panel sticky top-0 z-40 border-b border-slate-800 px-4 py-3">
+        <div class="max-w-7xl mx-auto flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-red-600 to-amber-500 flex items-center justify-center text-white shadow-lg shadow-red-600/30">
+                    <i class="fa-solid fa-dice text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="font-fun text-xl font-bold tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-red-400 via-amber-300 to-amber-500">
+                        Tombola Italiana
+                    </h1>
+                    <span id="room-code-display" class="text-xs font-mono text-slate-400 block">Multigiocatore Online</span>
+                </div>
+            </div>
+
+            <!-- STATS GIOCATORE CORRENTE -->
+            <div id="top-player-info" class="hidden flex items-center gap-3 bg-slate-900/90 px-3 py-1.5 rounded-xl border border-slate-700">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-user text-amber-400 text-xs"></i>
+                    <span id="player-name-tag" class="font-semibold text-xs">Giocatore</span>
+                </div>
+                <div class="h-4 w-px bg-slate-700"></div>
+                <div class="flex items-center gap-1.5 text-emerald-400 font-bold text-xs">
+                    <i class="fa-solid fa-wallet"></i>
+                    <span id="player-balance-tag">0 €</span>
+                </div>
+                <button onclick="tombolaApp.rechargeBalance()" title="Ricarica Gruzzolo" class="text-xs bg-emerald-600/30 hover:bg-emerald-600/50 text-emerald-300 px-2 py-0.5 rounded transition border border-emerald-500/30">
+                    <i class="fa-solid fa-plus"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- CONTENUTO PRINCIPALE -->
+    <main class="flex-grow max-w-7xl w-full mx-auto p-3 md:p-6 space-y-4">
+
+        <!-- NOTIFICA RICHIESTE DI ACCESSO PER HOST -->
+        <div id="host-approval-banner" class="hidden glass-panel p-4 rounded-2xl border-2 border-amber-500 bg-amber-950/90 space-y-3 shadow-2xl relative z-50">
+            <div class="flex items-center justify-between border-b border-amber-500/30 pb-2">
+                <div class="flex items-center gap-2 text-amber-300 font-bold text-base">
+                    <i class="fa-solid fa-user-clock text-2xl animate-bounce text-amber-400"></i>
+                    <span>Nuova richiesta di accesso alla stanza!</span>
+                </div>
+                <span class="text-xs text-amber-200/80 bg-amber-900/60 px-2.5 py-1 rounded-full border border-amber-500/40 font-mono">Host Control</span>
+            </div>
+            <div id="pending-requests-list" class="space-y-2">
+                <!-- Inserite dinamicamente da JS -->
+            </div>
+        </div>
+
+        <!-- SCHERMATA LOBBY (ACCESSO O CREAZIONE) -->
+        <section id="screen-lobby" class="max-w-md mx-auto my-6 glass-panel p-6 md:p-8 rounded-2xl shadow-2xl border border-slate-700 space-y-6">
+            <div class="text-center space-y-2">
+                <h2 class="text-2xl font-bold font-fun text-white">Benvenuto alla Tombola!</h2>
+                <p class="text-xs text-slate-400">Crea una nuova stanza oppure inserisci un codice per unirti ai tuoi parenti.</p>
+            </div>
+
+            <form onsubmit="tombolaApp.handleLobbySubmit(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-300 mb-1">Il Tuo Nome</label>
+                    <input type="text" id="input-player-name" required placeholder="Es. Zio Mario"
+                           class="w-full px-4 py-3 bg-slate-900/80 border border-slate-700 rounded-xl focus:outline-none focus:border-red-500 text-white placeholder-slate-500 font-medium">
+                </div>
+
+                <div class="grid grid-cols-2 gap-3 pt-2">
+                    <button type="button" onclick="tombolaApp.setLobbyMode('create')" id="btn-mode-create"
+                            class="py-2.5 text-sm font-semibold rounded-xl border border-red-500/50 bg-red-600/20 text-red-300 hover:bg-red-600 hover:text-white transition">
+                        Crea Stanza
+                    </button>
+                    <button type="button" onclick="tombolaApp.setLobbyMode('join')" id="btn-mode-join"
+                            class="py-2.5 text-sm font-semibold rounded-xl border border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white transition">
+                        Unisciti
+                    </button>
+                </div>
+
+                <div id="group-room-code" class="hidden">
+                    <label class="block text-xs font-semibold uppercase text-slate-300 mb-1">Codice Stanza (6 Caratteri)</label>
+                    <input type="text" id="input-room-code" placeholder="Es. TMB123" maxlength="6"
+                           class="w-full px-4 py-3 bg-slate-900/80 border border-slate-700 rounded-xl focus:outline-none focus:border-amber-500 text-white placeholder-slate-500 tracking-widest font-mono text-center text-lg uppercase">
+                </div>
+
+                <!-- IMPOSTAZIONI PERSONALIZZATE (Gruzzolo & Costo Cartella da 0.001€) -->
+                <div id="group-initial-budget" class="space-y-3">
+                    <div>
+                        <label class="block text-xs font-semibold uppercase text-slate-300 mb-1">Gruzzolo Iniziale (€)</label>
+                        <input type="number" id="input-initial-budget" value="10" min="0.001" step="0.001" required
+                               class="w-full px-4 py-2.5 bg-slate-900/80 border border-slate-700 rounded-xl focus:outline-none focus:border-red-500 text-white font-bold">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold uppercase text-slate-300 mb-1">Costo Singola Cartella (€)</label>
+                        <input type="number" id="input-ticket-cost" value="0.5" min="0.001" step="0.001" required
+                               class="w-full px-4 py-2.5 bg-slate-900/80 border border-slate-700 rounded-xl focus:outline-none focus:border-red-500 text-white font-bold">
+                    </div>
+                </div>
+
+                <button type="submit" id="btn-lobby-action"
+                        class="w-full py-3.5 bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-500 hover:to-amber-500 text-white font-bold rounded-xl shadow-lg shadow-red-600/30 transition transform active:scale-95 text-lg">
+                    Crea Nuova Stanza
+                </button>
+            </form>
+        </section>
+
+        <!-- SCHERMATA DI GIOCO PRINCIPALE -->
+        <section id="screen-game" class="hidden space-y-4">
+
+            <!-- BARRA MONTEPREMI E PREMI IN UNA SOLA RIGA -->
+            <div class="glass-panel p-3 rounded-2xl border border-slate-700 flex flex-col md:flex-row items-center justify-between gap-3">
+                <div class="flex items-center gap-3 min-w-fit px-2">
+                    <div class="p-2 bg-amber-500/20 text-amber-400 rounded-xl">
+                        <i class="fa-solid fa-trophy text-xl"></i>
+                    </div>
+                    <div>
+                        <span class="text-[10px] text-slate-400 block uppercase font-bold tracking-wider">Montepremi Totale</span>
+                        <span id="display-total-pot" class="text-lg font-black text-emerald-400">0 €</span>
+                    </div>
+                </div>
+
+                <!-- 5 PULSANTI PREMI DISPOSTI SU UN'UNICA RIGA HORIZONTAL -->
+                <div class="grid grid-cols-5 gap-1.5 md:gap-2 w-full flex-grow" id="prize-list-container">
+                    <!-- Generato via JS -->
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+
+                <!-- COLONNA SINISTRA: ESTRAZIONE & ACQUISTO CARTELLE & GIOCATORI (4 COLS) -->
+                <div class="lg:col-span-4 space-y-4">
+
+                    <!-- PALLONE ESTRAZIONE & CONTROLLI -->
+                    <div class="glass-panel p-4 rounded-2xl border border-slate-700 text-center relative overflow-hidden flex flex-col items-center">
+                        <div class="flex justify-between items-center w-full mb-2">
+                            <span class="text-xs uppercase font-bold tracking-wider text-slate-400">Ultimo Estratto</span>
+                            <button onclick="tombolaApp.toggleSpeech()" id="btn-toggle-speech" class="text-xs px-2.5 py-1 rounded-lg bg-slate-800 border border-slate-700 text-slate-300 hover:text-amber-400 transition flex items-center gap-1.5">
+                                <i class="fa-solid fa-volume-high text-amber-400"></i> <span id="speech-status-label">Voce ON</span>
+                            </button>
+                        </div>
+
+                        <!-- PALLONE NUMERO ESTRATTO -->
+                        <div class="my-2 flex flex-col items-center justify-center">
+                            <div id="display-drawn-ball" class="w-24 h-24 rounded-full bg-gradient-to-br from-red-500 via-red-600 to-amber-700 flex items-center justify-center text-white text-4xl font-black font-fun shadow-xl shadow-red-600/40 border-4 border-amber-300/40 pulse-ball">
+                                --
+                            </div>
+                            <div id="display-smorfia" class="mt-2 text-xs italic font-semibold text-amber-300 min-h-[20px]">
+                                In attesa dell'estrazione...
+                            </div>
+                        </div>
+
+                        <!-- CONTROLLI HOST ESTRAZIONE -->
+                        <div id="host-controls" class="w-full space-y-2 pt-2 border-t border-slate-700/60">
+                            <div class="grid grid-cols-2 gap-2">
+                                <button onclick="tombolaApp.drawNextNumber()" id="btn-draw-manual" class="py-2 px-3 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl transition shadow-md active:scale-95 text-xs flex items-center justify-center gap-1.5">
+                                    <i class="fa-solid fa-hand"></i> Estrai Ora
+                                </button>
+                                <button onclick="tombolaApp.toggleAutoDraw()" id="btn-draw-auto" class="py-2 px-3 bg-slate-800 hover:bg-slate-700 text-amber-400 border border-amber-500/30 font-bold rounded-xl transition shadow-md active:scale-95 text-xs flex items-center justify-center gap-1.5">
+                                    <i class="fa-solid fa-play"></i> Auto Play
+                                </button>
+                            </div>
+                            <div class="flex items-center justify-between text-xs text-slate-400 px-1">
+                                <span>Intervallo:</span>
+                                <select id="select-timer-speed" onchange="tombolaApp.changeSpeed(this.value)" class="bg-slate-900 border border-slate-700 text-slate-200 rounded px-2 py-0.5 text-xs focus:outline-none">
+                                    <option value="3000">3 Secondi</option>
+                                    <option value="5000" selected>5 Secondi</option>
+                                    <option value="8000">8 Secondi</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ACQUISTO CARTELLE -->
+                    <div class="glass-panel p-4 rounded-2xl border border-slate-700 space-y-3">
+                        <div class="flex justify-between items-center">
+                            <h3 class="font-bold text-white text-sm flex items-center gap-2">
+                                <i class="fa-solid fa-ticket text-red-400"></i> Acquisto Cartelle
+                            </h3>
+                            <span class="text-xs text-slate-400">Costo: <strong id="display-ticket-cost" class="text-emerald-400">0.5 €</strong>/cad</span>
+                        </div>
+
+                        <div class="flex items-center gap-2">
+                            <button onclick="tombolaApp.buyTickets(1)" class="flex-1 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-xl font-semibold text-xs transition flex justify-center items-center gap-1">
+                                +1 Cartella
+                            </button>
+                            <button onclick="tombolaApp.buyTickets(3)" class="flex-1 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-xl font-semibold text-xs transition flex justify-center items-center gap-1">
+                                +3 Cartelle
+                            </button>
+                        </div>
+                        <button onclick="tombolaApp.buyTabelloneSheet()" id="btn-buy-tabellone" class="w-full py-2 bg-amber-600/20 hover:bg-amber-600/30 border border-amber-500/40 text-amber-300 rounded-xl font-semibold text-xs transition flex justify-center items-center gap-2">
+                            <i class="fa-solid fa-table-cells"></i> Compra Scheda Tabellone (6 Cartelle)
+                        </button>
+                    </div>
+
+                    <!-- LISTA GIOCATORI IN STANZA -->
+                    <div class="glass-panel p-4 rounded-2xl border border-slate-700">
+                        <div class="flex items-center justify-between mb-2">
+                            <h4 class="text-xs uppercase font-bold text-slate-400">Giocatori In Stanza</h4>
+                            <div class="flex items-center gap-2">
+                                <span id="player-count-badge" class="bg-slate-800 text-amber-400 px-2 py-0.5 rounded-full text-xs">1</span>
+                                <button onclick="tombolaApp.simulateGuestJoin()" id="btn-test-guest" class="text-[10px] bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 px-2 py-0.5 rounded border border-amber-500/30 transition">
+                                    + Test Entrata
+                                </button>
+                            </div>
+                        </div>
+                        <ul id="players-list-ui" class="space-y-1.5 max-h-36 overflow-y-auto text-xs">
+                            <!-- Inseriti tramite JS -->
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- COLONNA DESTRA: TABELLONE A 6 SCHEDE / LE MIE CARTELLE (8 COLS) -->
+                <div class="lg:col-span-8 space-y-4">
+
+                    <!-- SELEZIONE VISTA: TABELLONE vs CARTELLE PERSONALI -->
+                    <div class="flex border-b border-slate-700 space-x-4">
+                        <button onclick="tombolaApp.switchMainTab('tabellone')" id="tab-btn-tabellone"
+                                class="pb-2.5 text-sm font-bold border-b-2 border-red-500 text-red-400 flex items-center gap-2">
+                            <i class="fa-solid fa-border-all"></i> Tabellone Principale (6 Schede)
+                        </button>
+                        <button onclick="tombolaApp.switchMainTab('my-cards')" id="tab-btn-my-cards"
+                                class="pb-2.5 text-sm font-bold border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-2">
+                            <i class="fa-solid fa-layer-group"></i> Le Mie Cartelle (<span id="my-cards-count">0</span>)
+                        </button>
+                        <button onclick="tombolaApp.showSummaryModal()" class="ml-auto pb-2.5 text-xs font-semibold text-slate-400 hover:text-amber-400 flex items-center gap-1">
+                            <i class="fa-solid fa-chart-pie"></i> Bilancio Finale
+                        </button>
+                    </div>
+
+                    <!-- TABELLONE DIVISO IN 6 SCHEDE TRADIZIONALI -->
+                    <div id="view-tabellone" class="space-y-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3" id="tabellone-schede-container">
+                            <!-- Le 6 schede verranno generate via JS -->
+                        </div>
+                    </div>
+
+                    <!-- LE MIE CARTELLE -->
+                    <div id="view-my-cards" class="hidden space-y-4">
+                        <div id="my-cards-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <!-- Cartelle utente -->
+                        </div>
+                        <div id="no-cards-msg" class="text-center py-12 glass-panel rounded-2xl border border-slate-700">
+                            <i class="fa-solid fa-ticket text-5xl text-slate-600 mb-3"></i>
+                            <p class="text-slate-400 font-semibold">Non possiedi ancora nessuna cartella!</p>
+                            <p class="text-xs text-slate-500 mt-1">Acquistane una dal pannello di sinistra per partecipare all'estrazione.</p>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- MODALE BILANCIO FINALE -->
+    <div id="modal-summary" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="glass-panel p-6 rounded-2xl max-w-md w-full border border-slate-700 shadow-2xl space-y-4">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 class="font-bold text-lg text-white flex items-center gap-2">
+                    <i class="fa-solid fa-chart-line text-amber-400"></i> Bilancio Finale Partita
+                </h3>
+                <button onclick="tombolaApp.closeSummaryModal()" class="text-slate-400 hover:text-white">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+
+            <div id="summary-players-list" class="space-y-2 max-h-60 overflow-y-auto">
+                <!-- Lista bilancio giocatori -->
+            </div>
+
+            <button onclick="tombolaApp.closeSummaryModal()" class="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-xl text-sm transition">
+                Chiudi
+            </button>
+        </div>
+    </div>
+
+    <!-- LOGICA FIREBASE E MOTORE TOMBOLA -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, updateDoc, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'tombola-italiana-default';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+
+        // DIZIONARIO SMORFIA NAPOLETANA
+        const SMORFIA = {
+            1: "L'Italia", 2: "Il bambinello", 3: "La gatta", 4: "Il maiale", 5: "La mano",
+            6: "Quella che guarda a terra", 7: "Vaso di argilla", 8: "La madonna", 9: "La figliolanza", 10: "I fagioli",
+            11: "I topi", 12: "I soldati", 13: "Sant'Antonio", 14: "L'ubriaco", 15: "Il ragazzo",
+            16: "Il culo", 17: "La sfortuna", 18: "Il sangue", 19: "La risata", 20: "Festa",
+            21: "La donna al balcone", 22: "I pazzi", 23: "Il bucato", 24: "La guardia", 25: "Natale",
+            26: "Anna", 27: "Il canterano", 28: "I seni", 29: "Il padre dei bimbi", 30: "Il pane",
+            31: "Il padrone di casa", 32: "Il capitone", 33: "Gli anni di Cristo", 34: "La testa", 35: "L'uccello",
+            36: "La nacchera", 37: "Il monaco", 38: "Le mazzate", 39: "Il cappio", 40: "La noia",
+            41: "Il coltello", 42: "Il caffè", 43: "La donna al balcone", 44: "Le carceri", 45: "Il vino buono",
+            46: "I denari", 47: "Il morto", 48: "Il morto che parla", 49: "La carne", 50: "Il pane caldo",
+            51: "Il giardino", 52: "La mamma", 53: "Il vecchio", 54: "Il cappello", 55: "La musica",
+            56: "La caduta", 57: "Il gobbo", 58: "Il regalo", 59: "I peli", 60: "L'inutile",
+            61: "I cacciatori", 62: "I morti scappati", 63: "La sposa", 64: "La marsina", 65: "Il pianto",
+            66: "Le due zitelle", 67: "Il calamaro", 68: "La minestra cotta", 69: "Sottosopra", 70: "Il palazzo",
+            71: "L'uomo di m**da", 72: "La meraviglia", 73: "L'ospedale", 74: "La grotta", 75: "Pulcinella",
+            76: "La fontana", 77: "I diavoli", 78: "Le belle figlie", 79: "Il ladro", 80: "La bocca",
+            81: "I fiori", 82: "Tavola imbandita", 83: "Il maltempo", 84: "La chiesa", 85: "L'anima del Purgatorio",
+            86: "Bottegaio", 87: "I pidocchi", 88: "I caciocavalli", 89: "La vecchia", 90: "La paura"
+        };
+
+        // Funzione per convertire il PCM16 grezzo restituito da Gemini TTS in un file WAV riproducibile
+        function pcmToWav(pcmData, sampleRate) {
+            const buffer = new ArrayBuffer(44 + pcmData.length * 2);
+            const view = new DataView(buffer);
+
+            /* RIFF identifier */
+            function writeString(offset, string) {
+                for (let i = 0; i < string.length; i++) {
+                    view.setUint8(offset + i, string.charCodeAt(i));
+                }
+            }
+
+            writeString(0, 'RIFF');
+            view.setUint32(4, 36 + pcmData.length * 2, true);
+            writeString(8, 'WAVE');
+            writeString(12, 'fmt ');
+            view.setUint32(16, 16, true); // Subchunk1Size (16 for PCM)
+            view.setUint16(20, 1, true);  // AudioFormat (1 for PCM)
+            view.setUint16(22, 1, true);  // NumChannels (1 channel)
+            view.setUint32(24, sampleRate, true); // SampleRate
+            view.setUint32(28, sampleRate * 2, true); // ByteRate
+            view.setUint16(32, 2, true);  // BlockAlign
+            view.setUint16(34, 16, true); // BitsPerSample
+            writeString(36, 'data');
+            view.setUint32(40, pcmData.length * 2, true);
+
+            // Scrittura dei dati PCM 16-bit
+            let offset = 44;
+            for (let i = 0; i < pcmData.length; i++) {
+                view.setInt16(offset, pcmData[i], true);
+                offset += 2;
+            }
+
+            return new Blob([view], { type: 'audio/wav' });
+        }
+
+        const PRIZE_TYPES = [
+            { id: 'ambo', label: 'Ambo', requiredCount: 2, share: 0.10 },
+            { id: 'terna', label: 'Terna', requiredCount: 3, share: 0.15 },
+            { id: 'quaterna', label: 'Quaterna', requiredCount: 4, share: 0.20 },
+            { id: 'cinquina', label: 'Cinquina', requiredCount: 5, share: 0.25 },
+            { id: 'tombola', label: 'Tombola', requiredCount: 15, share: 0.30 }
+        ];
+
+        // Formattazione con supporto ai decimali fino a 3 cifre
+        function formatMoney(num) {
+            const val = Number(num) || 0;
+            if (val % 1 === 0) return val.toString() + " €";
+            if ((val * 100) % 1 === 0) return val.toFixed(2) + " €";
+            return val.toFixed(3) + " €";
+        }
+
+        // Generazione casuale cartella tombola valida (3 righe x 9 colonne, 5 numeri a riga)
+        function generateRandomTicket() {
+            const grid = Array(3).fill(null).map(() => Array(9).fill(null));
+            const availablePerCol = Array(9).fill(null).map((_, col) => {
+                const min = col === 0 ? 1 : col * 10;
+                const max = col === 8 ? 90 : col * 10 + 9;
+                const nums = [];
+                for (let i = min; i <= max; i++) nums.push(i);
+                return nums;
+            });
+
+            for (let r = 0; r < 3; r++) {
+                const selectedCols = [];
+                while (selectedCols.length < 5) {
+                    const candidate = Math.floor(Math.random() * 9);
+                    if (!selectedCols.includes(candidate)) {
+                        selectedCols.push(candidate);
+                    }
+                }
+                selectedCols.sort((a, b) => a - b);
+                selectedCols.forEach(c => {
+                    const pool = availablePerCol[c];
+                    const idx = Math.floor(Math.random() * pool.length);
+                    grid[r][c] = pool.splice(idx, 1)[0];
+                });
+            }
+
+            return grid;
+        }
+
+        class TombolaGame {
+            constructor() {
+                this.db = null;
+                this.auth = null;
+                this.userId = null;
+                this.roomId = null;
+                this.playerName = "";
+                this.isHost = false;
+                this.speechEnabled = true;
+
+                this.initialBudget = 10;
+                this.ticketCost = 0.5;
+                this.balance = 10;
+                
+                this.myTickets = [];
+                this.markedNumbers = new Set();
+                this.extractedNumbers = [];
+                this.autoIntervalId = null;
+                this.autoSpeed = 5000;
+
+                this.roomData = {
+                    extractedNumbers: [],
+                    prizesWon: {},
+                    totalPot: 0,
+                    ticketCost: 0.5,
+                    players: {},
+                    pendingRequests: {}
+                };
+
+                this.initFirebase();
+            }
+
+            async initFirebase() {
+                if (firebaseConfig) {
+                    try {
+                        const app = initializeApp(firebaseConfig);
+                        this.db = getFirestore(app);
+                        this.auth = getAuth(app);
+
+                        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                            await signInWithCustomToken(this.auth, __initial_auth_token);
+                        } else {
+                            await signInAnonymously(this.auth);
+                        }
+
+                        this.userId = this.auth.currentUser ? this.auth.currentUser.uid : 'usr-' + Math.random().toString(36).substring(2, 9);
+                    } catch (err) {
+                        console.warn("Firestore fallback mode:", err);
+                        this.userId = 'usr-' + Math.random().toString(36).substring(2, 9);
+                    }
+                } else {
+                    this.userId = 'usr-' + Math.random().toString(36).substring(2, 9);
+                }
+                
+                this.renderTabelloneGrid();
+            }
+
+            setLobbyMode(mode) {
+                const btnCreate = document.getElementById('btn-mode-create');
+                const btnJoin = document.getElementById('btn-mode-join');
+                const groupRoomCode = document.getElementById('group-room-code');
+                const groupBudget = document.getElementById('group-initial-budget');
+                const btnSubmit = document.getElementById('btn-lobby-action');
+
+                if (mode === 'create') {
+                    btnCreate.className = "py-2.5 text-sm font-semibold rounded-xl border border-red-500/50 bg-red-600/20 text-red-300 hover:bg-red-600 hover:text-white transition";
+                    btnJoin.className = "py-2.5 text-sm font-semibold rounded-xl border border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white transition";
+                    groupRoomCode.classList.add('hidden');
+                    groupBudget.classList.remove('hidden');
+                    btnSubmit.innerText = "Crea Nuova Stanza";
+                } else {
+                    btnJoin.className = "py-2.5 text-sm font-semibold rounded-xl border border-red-500/50 bg-red-600/20 text-red-300 hover:bg-red-600 hover:text-white transition";
+                    btnCreate.className = "py-2.5 text-sm font-semibold rounded-xl border border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white transition";
+                    groupRoomCode.classList.remove('hidden');
+                    groupBudget.classList.add('hidden');
+                    btnSubmit.innerText = "Entra Nella Stanza";
+                }
+            }
+
+            async handleLobbySubmit(e) {
+                e.preventDefault();
+                this.playerName = document.getElementById('input-player-name').value.trim() || "Giocatore";
+                const isCreating = document.getElementById('group-room-code').classList.contains('hidden');
+
+                if (isCreating) {
+                    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+                    let code = 'T';
+                    for (let i = 0; i < 5; i++) {
+                        code += chars.charAt(Math.floor(Math.random() * chars.length));
+                    }
+                    this.roomId = code;
+                    this.isHost = true;
+                    this.initialBudget = parseFloat(document.getElementById('input-initial-budget').value) || 10;
+                    this.ticketCost = parseFloat(document.getElementById('input-ticket-cost').value) || 0.5;
+                } else {
+                    this.roomId = document.getElementById('input-room-code').value.trim().toUpperCase();
+                    this.isHost = false;
+                }
+
+                this.balance = this.initialBudget;
+
+                document.getElementById('player-name-tag').innerText = this.playerName;
+                document.getElementById('player-balance-tag').innerText = formatMoney(this.balance);
+                document.getElementById('room-code-display').innerText = `Codice Stanza: ${this.roomId}`;
+                document.getElementById('display-ticket-cost').innerText = formatMoney(this.ticketCost);
+                document.getElementById('top-player-info').classList.remove('hidden');
+
+                if (!this.isHost) {
+                    document.getElementById('host-controls').classList.add('hidden');
+                }
+
+                this.subscribeToRoom();
+            }
+
+            getRoomDocRef() {
+                return doc(this.db, 'artifacts', appId, 'public', 'data', 'tombola_rooms', this.roomId);
+            }
+
+            async subscribeToRoom() {
+                if (!this.db || !this.roomId) {
+                    document.getElementById('screen-lobby').classList.add('hidden');
+                    document.getElementById('screen-game').classList.remove('hidden');
+                    this.renderPrizeList();
+                    return;
+                }
+
+                const roomRef = this.getRoomDocRef();
+
+                if (this.isHost) {
+                    await setDoc(roomRef, {
+                        roomId: this.roomId,
+                        extractedNumbers: [],
+                        prizesWon: {},
+                        totalPot: 0,
+                        ticketCost: this.ticketCost,
+                        initialBudget: this.initialBudget,
+                        players: {
+                            [this.userId]: { name: this.playerName, balance: this.balance, spent: 0, won: 0, status: 'approved' }
+                        },
+                        pendingRequests: {}
+                    }, { merge: true });
+
+                    document.getElementById('screen-lobby').classList.add('hidden');
+                    document.getElementById('screen-game').classList.remove('hidden');
+                    this.renderPrizeList();
+                } else {
+                    const btnSubmit = document.getElementById('btn-lobby-action');
+                    btnSubmit.disabled = true;
+                    btnSubmit.innerText = "In attesa di approvazione dell'Host...";
+                    btnSubmit.classList.add('opacity-75');
+
+                    const reqData = { name: this.playerName, timestamp: Date.now() };
+
+                    try {
+                        const snap = await getDoc(roomRef);
+                        if (!snap.exists()) {
+                            alert("Codice stanza non trovato! Verifica di aver inserito il codice corretto creato dall'Host.");
+                            btnSubmit.disabled = false;
+                            btnSubmit.innerText = "Entra Nella Stanza";
+                            btnSubmit.classList.remove('opacity-75');
+                            return;
+                        }
+
+                        await setDoc(roomRef, {
+                            pendingRequests: {
+                                [this.userId]: reqData
+                            },
+                            players: {
+                                [this.userId]: {
+                                    name: this.playerName,
+                                    balance: snap.data().initialBudget || 10,
+                                    spent: 0,
+                                    won: 0,
+                                    status: 'pending'
+                                }
+                            }
+                        }, { merge: true });
+                    } catch (err) {
+                        console.error("Errore invio richiesta a Firestore:", err);
+                    }
+                }
+
+                onSnapshot(roomRef, (snapshot) => {
+                    if (snapshot.exists()) {
+                        const data = snapshot.data();
+                        this.roomData = data;
+                        
+                        if (data.ticketCost !== undefined) {
+                            this.ticketCost = Number(data.ticketCost);
+                            document.getElementById('display-ticket-cost').innerText = formatMoney(this.ticketCost);
+                        }
+
+                        if (data.initialBudget !== undefined && !this.isHost) {
+                            this.initialBudget = Number(data.initialBudget);
+                            if (this.balance === undefined || this.balance === 0 || this.balance === 10) {
+                                this.balance = this.initialBudget;
+                                document.getElementById('player-balance-tag').innerText = formatMoney(this.balance);
+                            }
+                        }
+
+                        if (!this.isHost) {
+                            const myPlayerData = data.players ? data.players[this.userId] : null;
+                            if (myPlayerData && myPlayerData.status === 'approved') {
+                                document.getElementById('screen-lobby').classList.add('hidden');
+                                document.getElementById('screen-game').classList.remove('hidden');
+                                this.renderPrizeList();
+                            } else if (data.rejectedUsers && data.rejectedUsers.includes(this.userId)) {
+                                alert("La tua richiesta di accesso alla stanza è stata rifiutata dall'Host.");
+                                location.reload();
+                                return;
+                            }
+                        }
+
+                        if (this.isHost) {
+                            const pendingCombined = { ...(data.pendingRequests || {}) };
+                            if (data.players) {
+                                Object.keys(data.players).forEach(uid => {
+                                    if (data.players[uid].status === 'pending') {
+                                        pendingCombined[uid] = { name: data.players[uid].name, timestamp: Date.now() };
+                                    }
+                                });
+                            }
+                            this.renderPendingRequestsUI(pendingCombined);
+                        }
+
+                        this.extractedNumbers = data.extractedNumbers || [];
+                        this.updateTabelloneUI();
+                        this.renderPrizeList();
+                        this.renderPlayersListUI();
+                        this.checkAutoMarkMyTickets();
+
+                        if (this.extractedNumbers.length > 0) {
+                            const last = this.extractedNumbers[this.extractedNumbers.length - 1];
+                            this.updateBallDisplay(last);
+                        }
+                    }
+                }, (error) => console.error("Snapshot error:", error));
+            }
+
+            renderPendingRequestsUI(requests) {
+                const banner = document.getElementById('host-approval-banner');
+                const list = document.getElementById('pending-requests-list');
+                const keys = Object.keys(requests || {});
+
+                if (keys.length === 0) {
+                    banner.classList.add('hidden');
+                    list.innerHTML = "";
+                    return;
+                }
+
+                banner.classList.remove('hidden');
+                list.innerHTML = "";
+
+                keys.forEach(uid => {
+                    const req = requests[uid];
+                    const item = document.createElement('div');
+                    item.className = "flex items-center justify-between bg-amber-900/40 p-2.5 rounded-xl border border-amber-500/30";
+                    item.innerHTML = `
+                        <div class="flex items-center gap-2">
+                            <i class="fa-solid fa-user-plus text-amber-300"></i>
+                            <span class="font-bold text-white text-sm">${req.name || 'Giocatore'}</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button onclick="tombolaApp.approvePlayer('${uid}', '${req.name}')" class="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-lg transition shadow-md">
+                                Accetta
+                            </button>
+                            <button onclick="tombolaApp.rejectPlayer('${uid}')" class="px-3 py-1 bg-red-600 hover:bg-red-500 text-white font-bold text-xs rounded-lg transition shadow-md">
+                                Rifiuta
+                            </button>
+                        </div>
+                    `;
+                    list.appendChild(item);
+                });
+            }
+
+            approvePlayer(uid, name) {
+                if (!this.roomId) return;
+                
+                const updatedPending = { ...this.roomData.pendingRequests };
+                delete updatedPending[uid];
+
+                if (this.db) {
+                    const roomRef = this.getRoomDocRef();
+                    updateDoc(roomRef, {
+                        pendingRequests: updatedPending,
+                        [`players.${uid}.status`]: 'approved'
+                    }).catch(err => console.error("Errore approvazione:", err));
+                } else {
+                    if (this.roomData.players[uid]) this.roomData.players[uid].status = 'approved';
+                    delete this.roomData.pendingRequests[uid];
+                    this.renderPendingRequestsUI(this.roomData.pendingRequests);
+                    this.renderPlayersListUI();
+                }
+            }
+
+            rejectPlayer(uid) {
+                if (!this.roomId) return;
+                
+                const updatedPending = { ...this.roomData.pendingRequests };
+                delete updatedPending[uid];
+
+                const rejected = this.roomData.rejectedUsers || [];
+                if (!rejected.includes(uid)) rejected.push(uid);
+
+                if (this.db) {
+                    const roomRef = this.getRoomDocRef();
+                    updateDoc(roomRef, {
+                        pendingRequests: updatedPending,
+                        rejectedUsers: rejected
+                    }).catch(err => console.error("Errore rifiuto:", err));
+                } else {
+                    delete this.roomData.pendingRequests[uid];
+                    this.renderPendingRequestsUI(this.roomData.pendingRequests);
+                }
+            }
+
+            simulateGuestJoin() {
+                const guestName = "Ospite " + Math.floor(Math.random() * 90 + 10);
+                const guestUid = 'guest-' + Math.random().toString(36).substring(2, 7);
+
+                const updatedPending = { ...(this.roomData.pendingRequests || {}) };
+                updatedPending[guestUid] = { name: guestName, timestamp: Date.now() };
+
+                if (this.db && this.roomId) {
+                    const roomRef = this.getRoomDocRef();
+                    updateDoc(roomRef, {
+                        pendingRequests: updatedPending,
+                        [`players.${guestUid}`]: { name: guestName, balance: this.initialBudget, status: 'pending' }
+                    });
+                } else {
+                    this.roomData.pendingRequests = updatedPending;
+                    this.roomData.players[guestUid] = { name: guestName, balance: this.initialBudget, status: 'pending' };
+                    this.renderPendingRequestsUI(updatedPending);
+                }
+            }
+
+            renderTabelloneGrid() {
+                const container = document.getElementById('tabellone-schede-container');
+                if (!container) return;
+                container.innerHTML = "";
+
+                // 6 schede tradizionali da 15 numeri ciascuna (totale 90 numeri)
+                for (let s = 0; s < 6; s++) {
+                    const cardEl = document.createElement('div');
+                    cardEl.className = "glass-panel p-2.5 rounded-xl border border-slate-800 bg-slate-900/60 shadow-lg";
+
+                    let html = `<div class="text-[10px] uppercase font-bold text-amber-400 mb-1.5 flex justify-between items-center border-b border-slate-800 pb-1">
+                                    <span>Scheda ${s + 1}</span>
+                                    <span class="text-slate-500 font-mono">1-90</span>
+                                </div>
+                                <div class="grid grid-cols-5 gap-1">`;
+
+                    for (let n = 1; n <= 15; n++) {
+                        const numVal = s * 15 + n;
+                        html += `
+                            <div id="tab-num-${numVal}" class="tombola-number aspect-square rounded-lg border border-slate-700/60 bg-slate-800/80 flex flex-col items-center justify-center cursor-pointer text-slate-200 hover:border-amber-500/50">
+                                <span class="font-extrabold text-sm font-fun">${numVal}</span>
+                            </div>
+                        `;
+                    }
+
+                    html += `</div>`;
+                    cardEl.innerHTML = html;
+                    container.appendChild(cardEl);
+                }
+            }
+
+            updateTabelloneUI() {
+                for (let i = 1; i <= 90; i++) {
+                    const el = document.getElementById(`tab-num-${i}`);
+                    if (el) {
+                        if (this.extractedNumbers.includes(i)) {
+                            el.classList.add('extracted');
+                        } else {
+                            el.classList.remove('extracted');
+                        }
+                    }
+                }
+            }
+
+            updateBallDisplay(num) {
+                const ball = document.getElementById('display-drawn-ball');
+                const smorfiaEl = document.getElementById('display-smorfia');
+                if (ball) ball.innerText = num || "--";
+                if (smorfiaEl) smorfiaEl.innerText = num ? `${num} - ${SMORFIA[num] || ''}` : "In attesa dell'estrazione...";
+            }
+
+            renderPrizeList() {
+                const container = document.getElementById('prize-list-container');
+                const totalPot = this.roomData.totalPot || 0;
+                document.getElementById('display-total-pot').innerText = formatMoney(totalPot);
+
+                if (!container) return;
+                container.innerHTML = "";
+
+                PRIZE_TYPES.forEach(prize => {
+                    const prizeVal = totalPot * prize.share;
+                    const winner = this.roomData.prizesWon ? this.roomData.prizesWon[prize.id] : null;
+
+                    const btn = document.createElement('button');
+                    btn.onclick = () => this.claimPrize(prize.id);
+                    btn.disabled = !!winner;
+
+                    if (winner) {
+                        btn.className = "flex flex-col items-center justify-center p-1.5 rounded-xl bg-slate-900/80 border border-slate-800 text-slate-500 cursor-not-allowed opacity-80 text-center";
+                        btn.innerHTML = `
+                            <span class="text-[10px] font-bold line-through">${prize.label}</span>
+                            <span class="text-xs font-black text-amber-500/70">${formatMoney(prizeVal)}</span>
+                            <span class="text-[9px] truncate max-w-full text-slate-400 font-semibold">${winner.playerName}</span>
+                        `;
+                    } else {
+                        btn.className = "flex flex-col items-center justify-center p-1.5 rounded-xl bg-gradient-to-b from-slate-800 to-slate-900 border border-amber-500/30 hover:border-amber-400 text-amber-300 hover:text-white transition shadow-md active:scale-95 text-center";
+                        btn.innerHTML = `
+                            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-300">${prize.label}</span>
+                            <span class="text-xs font-black text-emerald-400">${formatMoney(prizeVal)}</span>
+                            <span class="text-[9px] text-amber-400 font-bold">Riscuoti</span>
+                        `;
+                    }
+
+                    container.appendChild(btn);
+                });
+            }
+
+            buyTickets(count) {
+                const totalCost = count * this.ticketCost;
+                if (this.balance < totalCost) {
+                    alert(`Saldo insufficiente! Servono ${formatMoney(totalCost)} per acquistare ${count} cartelle.`);
+                    return;
+                }
+
+                this.balance -= totalCost;
+                document.getElementById('player-balance-tag').innerText = formatMoney(this.balance);
+
+                for (let i = 0; i < count; i++) {
+                    this.myTickets.push(generateRandomTicket());
+                }
+
+                document.getElementById('my-cards-count').innerText = this.myTickets.length;
+                this.renderMyTicketsUI();
+                this.updateRoomPot((this.roomData.totalPot || 0) + totalCost);
+            }
+
+            buyTabelloneSheet() {
+                const totalCost = 6 * this.ticketCost;
+                if (this.balance < totalCost) {
+                    alert(`Saldo insufficiente per acquistare l'intero tabellone (${formatMoney(totalCost)}).`);
+                    return;
+                }
+
+                this.balance -= totalCost;
+                document.getElementById('player-balance-tag').innerText = formatMoney(this.balance);
+
+                for (let i = 0; i < 6; i++) {
+                    this.myTickets.push(generateRandomTicket());
+                }
+
+                document.getElementById('my-cards-count').innerText = this.myTickets.length;
+                this.renderMyTicketsUI();
+                this.updateRoomPot((this.roomData.totalPot || 0) + totalCost);
+                alert("Hai acquistato l'intero tabellone (6 cartelle)!");
+            }
+
+            renderMyTicketsUI() {
+                const container = document.getElementById('my-cards-container');
+                const emptyMsg = document.getElementById('no-cards-msg');
+
+                if (this.myTickets.length === 0) {
+                    emptyMsg.classList.remove('hidden');
+                    container.innerHTML = "";
+                    return;
+                }
+
+                emptyMsg.classList.add('hidden');
+                container.innerHTML = "";
+
+                this.myTickets.forEach((tkt, idx) => {
+                    const cardEl = document.createElement('div');
+                    cardEl.className = "glass-panel p-3 rounded-2xl border border-slate-700 space-y-2 bg-slate-900/80";
+
+                    let html = `<div class="flex justify-between items-center text-xs font-bold border-b border-slate-800 pb-1.5 text-amber-300">
+                                    <span>Cartella #${idx + 1}</span>
+                                    <span class="text-slate-400 font-mono text-[10px]">Giocatore</span>
+                                </div>
+                                <div class="grid grid-cols-9 gap-1 text-center font-bold">`;
+
+                    for (let r = 0; r < 3; r++) {
+                        for (let c = 0; c < 9; c++) {
+                            const val = tkt[r][c];
+                            if (val) {
+                                const isMarked = this.markedNumbers.has(val);
+                                const isExtracted = this.extractedNumbers.includes(val);
+                                const markedClass = isMarked ? 'marked' : (isExtracted ? 'border-amber-400/80 text-amber-300 animate-pulse' : '');
+
+                                html += `
+                                    <div onclick="tombolaApp.toggleMarkNumber(${val})" class="card-number ${markedClass} aspect-square rounded-lg border border-slate-700 bg-slate-800 flex items-center justify-center cursor-pointer text-xs transition transform hover:scale-105">
+                                        ${val}
+                                    </div>
+                                `;
+                            } else {
+                                html += `<div class="aspect-square rounded-lg bg-slate-950/40 border border-slate-900"></div>`;
+                            }
+                        }
+                    }
+
+                    html += `</div>`;
+                    cardEl.innerHTML = html;
+                    container.appendChild(cardEl);
+                });
+            }
+
+            toggleMarkNumber(num) {
+                if (this.markedNumbers.has(num)) {
+                    this.markedNumbers.delete(num);
+                } else {
+                    this.markedNumbers.add(num);
+                }
+                this.renderMyTicketsUI();
+            }
+
+            checkAutoMarkMyTickets() {
+                this.extractedNumbers.forEach(n => this.markedNumbers.add(n));
+                this.renderMyTicketsUI();
+            }
+
+            checkTicketProgress(ticket) {
+                let maxRowMarked = 0;
+                let totalMarked = 0;
+
+                for (let r = 0; r < 3; r++) {
+                    let rowCount = 0;
+                    for (let c = 0; c < 9; c++) {
+                        const val = ticket[r][c];
+                        if (val && this.markedNumbers.has(val)) {
+                            rowCount++;
+                            totalMarked++;
+                        }
+                    }
+                    if (rowCount > maxRowMarked) maxRowMarked = rowCount;
+                }
+
+                return { maxRowMarked, totalMarked };
+            }
+
+            updateRoomPot(newPot) {
+                if (this.db && this.roomId) {
+                    const roomRef = this.getRoomDocRef();
+                    updateDoc(roomRef, {
+                        totalPot: newPot
+                    });
+                } else {
+                    this.roomData.totalPot = newPot;
+                    this.renderPrizeList();
+                }
+                this.syncPlayerState();
+            }
+
+            syncPlayerState() {
+                if (this.db && this.roomId) {
+                    const roomRef = this.getRoomDocRef();
+                    updateDoc(roomRef, {
+                        [`players.${this.userId}.balance`]: this.balance
+                    });
+                }
+            }
+
+            drawNextNumber() {
+                if (this.extractedNumbers.length >= 90) {
+                    alert("Tutti i 90 numeri della Tombola sono stati estratti!");
+                    this.stopAutoDraw();
+                    return;
+                }
+
+                let nextNum;
+                do {
+                    nextNum = Math.floor(Math.random() * 90) + 1;
+                } while (this.extractedNumbers.includes(nextNum));
+
+                this.extractedNumbers.push(nextNum);
+
+                if (this.db && this.roomId) {
+                    const roomRef = this.getRoomDocRef();
+                    updateDoc(roomRef, {
+                        extractedNumbers: this.extractedNumbers
+                    });
+                } else {
+                    this.updateTabelloneUI();
+                    this.updateBallDisplay(nextNum);
+                    this.checkAutoMarkMyTickets();
+                }
+
+                if (this.speechEnabled) {
+                    this.speakNumber(nextNum);
+                }
+            }
+
+            toggleAutoDraw() {
+                const btn = document.getElementById('btn-draw-auto');
+                if (this.autoIntervalId) {
+                    this.stopAutoDraw();
+                    btn.innerHTML = `<i class="fa-solid fa-play"></i> Auto Play`;
+                    btn.classList.remove('bg-amber-600', 'text-white');
+                    btn.classList.add('bg-slate-800', 'text-amber-400');
+                } else {
+                    this.drawNextNumber();
+                    this.autoIntervalId = setInterval(() => this.drawNextNumber(), this.autoSpeed);
+                    btn.innerHTML = `<i class="fa-solid fa-pause"></i> Pausa`;
+                    btn.classList.remove('bg-slate-800', 'text-amber-400');
+                    btn.classList.add('bg-amber-600', 'text-white');
+                }
+            }
+
+            stopAutoDraw() {
+                if (this.autoIntervalId) {
+                    clearInterval(this.autoIntervalId);
+                    this.autoIntervalId = null;
+                }
+            }
+
+            changeSpeed(val) {
+                this.autoSpeed = parseInt(val, 10) || 5000;
+                if (this.autoIntervalId) {
+                    this.stopAutoDraw();
+                    this.toggleAutoDraw();
+                }
+            }
+
+            toggleSpeech() {
+                this.speechEnabled = !this.speechEnabled;
+                const label = document.getElementById('speech-status-label');
+                label.innerText = this.speechEnabled ? "Voce ON" : "Voce OFF";
+            }
+
+            async speakNumber(num) {
+                if (!this.speechEnabled) return;
+
+                const textPrompt = `Pronuncia con entusiasmo in italiano: Numero ${num}, ${SMORFIA[num] || ''}!`;
+
+                try {
+                    const apiKey = ""; // Canvas runtime injection
+                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
+
+                    const payload = {
+                        contents: [{
+                            parts: [{ text: textPrompt }]
+                        }],
+                        generationConfig: {
+                            responseModalities: ["AUDIO"],
+                            speechConfig: {
+                                voiceConfig: {
+                                    prebuiltVoiceConfig: { voiceName: "Puck" }
+                                }
+                            }
+                        }
+                    };
+
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (response.ok) {
+                        const result = await response.json();
+                        const part = result?.candidates?.[0]?.content?.parts?.[0];
+                        const audioData = part?.inlineData?.data;
+                        const mimeType = part?.inlineData?.mimeType;
+
+                        if (audioData && mimeType) {
+                            const rateMatch = mimeType.match(/rate=(\d+)/);
+                            const sampleRate = rateMatch ? parseInt(rateMatch[1], 10) : 24000;
+                            
+                            const binaryStr = atob(audioData);
+                            const len = binaryStr.length;
+                            const bytes = new Uint8Array(len);
+                            for (let i = 0; i < len; i++) {
+                                bytes[i] = binaryStr.charCodeAt(i);
+                            }
+
+                            const pcm16 = new Int16Array(bytes.buffer);
+                            const wavBlob = pcmToWav(pcm16, sampleRate);
+                            const audioUrl = URL.createObjectURL(wavBlob);
+                            const audio = new Audio(audioUrl);
+                            audio.play();
+                            return;
+                        }
+                    }
+                } catch (e) {
+                    console.warn("Gemini TTS non disponibile, ricaduta su sintesi vocale di sistema:", e);
+                }
+
+                // Fallback alla sintesi vocale nativa del browser in caso di errore di rete
+                if ('speechSynthesis' in window) {
+                    window.speechSynthesis.cancel();
+                    const text = `Numero ${num}. ${SMORFIA[num] || ''}`;
+                    const utterance = new SpeechSynthesisUtterance(text);
+                    utterance.lang = 'it-IT';
+                    utterance.rate = 0.9;
+                    const voices = window.speechSynthesis.getVoices();
+                    const itVoice = voices.find(v => v.lang.includes('it') || v.lang.includes('IT'));
+                    if (itVoice) utterance.voice = itVoice;
+                    window.speechSynthesis.speak(utterance);
+                }
+            }
+
+            switchMainTab(tab) {
+                const btnTabellone = document.getElementById('tab-btn-tabellone');
+                const btnCards = document.getElementById('tab-btn-my-cards');
+                const viewTabellone = document.getElementById('view-tabellone');
+                const viewCards = document.getElementById('view-my-cards');
+
+                if (tab === 'tabellone') {
+                    btnTabellone.className = "pb-2.5 text-sm font-bold border-b-2 border-red-500 text-red-400 flex items-center gap-2";
+                    btnCards.className = "pb-2.5 text-sm font-bold border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-2";
+                    viewTabellone.classList.remove('hidden');
+                    viewCards.classList.add('hidden');
+                } else {
+                    btnCards.className = "pb-2.5 text-sm font-bold border-b-2 border-red-500 text-red-400 flex items-center gap-2";
+                    btnTabellone.className = "pb-2.5 text-sm font-bold border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-2";
+                    viewCards.classList.remove('hidden');
+                    viewTabellone.classList.add('hidden');
+                }
+            }
+
+            rechargeBalance() {
+                const amountStr = prompt("Inserisci l'importo da ricaricare nel tuo gruzzolo (€):", "10");
+                if (!amountStr) return;
+                const amount = parseFloat(amountStr);
+                if (isNaN(amount) || amount <= 0) return;
+
+                this.balance += amount;
+                document.getElementById('player-balance-tag').innerText = formatMoney(this.balance);
+                this.syncPlayerState();
+            }
+
+            claimPrize(prizeId) {
+                const prizeObj = PRIZE_TYPES.find(p => p.id === prizeId);
+                if (!prizeObj) return;
+
+                let qualified = false;
+                this.myTickets.forEach(tkt => {
+                    const progress = this.checkTicketProgress(tkt);
+                    if (prizeObj.id === 'tombola' && progress.totalMarked === 15) qualified = true;
+                    else if (prizeObj.id === 'cinquina' && progress.maxRowMarked >= 5) qualified = true;
+                    else if (prizeObj.id === 'quaterna' && progress.maxRowMarked >= 4) qualified = true;
+                    else if (prizeObj.id === 'terna' && progress.maxRowMarked >= 3) qualified = true;
+                    else if (prizeObj.id === 'ambo' && progress.maxRowMarked >= 2) qualified = true;
+                });
+
+                if (!qualified) {
+                    alert(`Non hai i requisiti sulle tue cartelle per riscuotere il premio ${prizeObj.label}! Controlla i tuoi numeri.`);
+                    return;
+                }
+
+                const pot = this.roomData.totalPot || 0;
+                const prizeVal = pot * prizeObj.share;
+
+                if (this.db && this.roomId) {
+                    const roomRef = this.getRoomDocRef();
+                    updateDoc(roomRef, {
+                        [`prizesWon.${prizeId}`]: {
+                            userId: this.userId,
+                            playerName: this.playerName,
+                            amount: prizeVal
+                        }
+                    });
+                }
+
+                this.balance += prizeVal;
+                this.syncPlayerState();
+                document.getElementById('player-balance-tag').innerText = formatMoney(this.balance);
+
+                confetti({
+                    particleCount: 120,
+                    spread: 80,
+                    origin: { y: 0.6 }
+                });
+
+                alert(`COMPLIMENTI! Hai riscosso il premio ${prizeObj.label} di ${formatMoney(prizeVal)}!`);
+            }
+
+            renderPlayersListUI() {
+                const listContainer = document.getElementById('players-list-ui');
+                const badge = document.getElementById('player-count-badge');
+                
+                const playersObj = this.roomData.players || {};
+                const keys = Object.keys(playersObj).filter(k => playersObj[k].status === 'approved');
+                if (badge) badge.innerText = keys.length;
+
+                if (!listContainer) return;
+                listContainer.innerHTML = "";
+                keys.forEach(k => {
+                    const p = playersObj[k];
+                    const item = document.createElement('li');
+                    item.className = "flex justify-between items-center bg-slate-900/60 px-2.5 py-1 rounded-lg border border-slate-800";
+                    item.innerHTML = `
+                        <span class="font-semibold text-slate-300">${p.name} ${k === this.userId ? '(Tu)' : ''}</span>
+                        <span class="text-emerald-400 font-bold">${formatMoney(p.balance)}</span>
+                    `;
+                    listContainer.appendChild(item);
+                });
+            }
+
+            showSummaryModal() {
+                const modal = document.getElementById('modal-summary');
+                const container = document.getElementById('summary-players-list');
+                const players = this.roomData.players || {};
+
+                container.innerHTML = "";
+                Object.keys(players).forEach(k => {
+                    const p = players[k];
+                    const netProfit = p.balance - this.initialBudget;
+                    const profitClass = netProfit >= 0 ? 'text-emerald-400' : 'text-red-400';
+                    const sign = netProfit >= 0 ? '+' : '';
+
+                    const row = document.createElement('div');
+                    row.className = "flex justify-between items-center p-3 bg-slate-950 rounded-xl border border-slate-800 text-sm";
+                    row.innerHTML = `
+                        <div>
+                            <div class="font-bold text-slate-200">${p.name}</div>
+                            <div class="text-xs text-slate-500">Saldo: ${formatMoney(p.balance)}</div>
+                        </div>
+                        <div class="font-black ${profitClass} text-base">
+                            ${sign}${formatMoney(netProfit)}
+                        </div>
+                    `;
+                    container.appendChild(row);
+                });
+
+                modal.classList.remove('hidden');
+            }
+
+            closeSummaryModal() {
+                document.getElementById('modal-summary').classList.add('hidden');
+            }
+        }
+
+        window.tombolaApp = new TombolaGame();
+    </script>
+</body>
+</html>
