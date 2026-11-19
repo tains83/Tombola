@@ -263,7 +263,62 @@
                             </button>
                         </div>
                     </div>
-                        <div class="ml-auto flex flex-wrap items-center gap-2 pb-1.5">
+
+                    <!-- ACQUISTO CARTELLE -->
+                    <div class="glass-panel p-4 rounded-2xl border border-slate-700 space-y-3">
+                        <div class="flex justify-between items-center">
+                            <h3 class="font-bold text-sm text-white flex items-center gap-2">
+                                <i class="fa-solid fa-ticket text-amber-400"></i> Acquista Cartelle
+                            </h3>
+                            <span class="text-xs text-slate-400">Costo: <strong id="display-ticket-cost" class="text-emerald-400">0.50 €</strong></span>
+                        </div>
+                        <div class="grid grid-cols-3 gap-2">
+                            <button onclick="tombolaApp.buyTickets(1)" class="py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl text-xs font-bold text-slate-200 transition active:scale-95">
+                                +1 Cartella
+                            </button>
+                            <button onclick="tombolaApp.buyTickets(3)" class="py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl text-xs font-bold text-slate-200 transition active:scale-95">
+                                +3 Cartelle
+                            </button>
+                            <button onclick="tombolaApp.buyTabelloneSheet()" class="py-2 bg-amber-600/20 hover:bg-amber-600/30 border border-amber-500/40 rounded-xl text-xs font-bold text-amber-300 transition active:scale-95">
+                                Tabellone (6)
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- GIOCATORI CONNESSI -->
+                    <div class="glass-panel p-4 rounded-2xl border border-slate-700 space-y-2.5">
+                        <div class="flex justify-between items-center">
+                            <h3 class="font-bold text-xs uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                                <i class="fa-solid fa-users text-amber-400"></i> Giocatori (<span id="player-count-badge">1</span>)
+                            </h3>
+                            <button id="btn-test-guest" onclick="tombolaApp.simulateGuestJoin()" class="text-[10px] px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-400 border border-slate-700 transition">
+                                + Simula Ospite
+                            </button>
+                        </div>
+                        <ul id="players-list-ui" class="space-y-1.5 text-xs max-h-40 overflow-y-auto">
+                            <!-- Lista giocatori via JS -->
+                        </ul>
+                    </div>
+
+                </div>
+
+                <!-- COLONNA DESTRA: TABELLONE E CARTELLE PERSONALI (8 COLS) -->
+                <div class="lg:col-span-8 space-y-4">
+
+                    <!-- BARRA NAVIGAZIONE SCHEDE E MODALITÀ SEGNATURA -->
+                    <div class="flex flex-wrap items-center justify-between border-b border-slate-800 gap-2">
+                        <div class="flex items-center gap-4">
+                            <button onclick="tombolaApp.switchMainTab('tabellone')" id="tab-btn-tabellone"
+                                    class="pb-2.5 text-sm font-bold border-b-2 border-red-500 text-red-400 flex items-center gap-2">
+                                <i class="fa-solid fa-table-cells"></i> Tabellone (1-90)
+                            </button>
+                            <button onclick="tombolaApp.switchMainTab('my-cards')" id="tab-btn-my-cards"
+                                    class="pb-2.5 text-sm font-bold border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-2">
+                                <i class="fa-solid fa-layer-group"></i> Le Mie Cartelle (<span id="my-cards-count">0</span>)
+                            </button>
+                        </div>
+
+                        <div class="flex flex-wrap items-center gap-2 pb-1.5">
                             <!-- PULSANTE MODALITÀ SEGNATURA AUTOMATICA / MANUALE -->
                             <button onclick="tombolaApp.toggleMarkMode()" id="btn-toggle-mark-mode"
                                     title="Scegli se segnare i numeri in automatico o manualmente come nella tombola tradizionale"
@@ -283,6 +338,13 @@
                             <button onclick="tombolaApp.showSummaryModal()" class="text-xs font-semibold text-slate-400 hover:text-amber-400 flex items-center gap-1 px-2 py-1">
                                 <i class="fa-solid fa-chart-pie"></i> Bilancio
                             </button>
+                        </div>
+                    </div>
+
+                    <!-- TABELLONE PRINCIPALE A 6 SCHEDE -->
+                    <div id="view-tabellone">
+                        <div id="tabellone-schede-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                            <!-- 6 schede generate via JS -->
                         </div>
                     </div>
 
@@ -333,6 +395,26 @@
         </div>
     </div>
 
+    <!-- MODALE PERSONALIZZATO PER AVVISI, CONFERME E INPUT -->
+    <div id="custom-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="glass-panel p-6 rounded-2xl max-w-sm w-full border border-slate-700 shadow-2xl space-y-4 text-center">
+            <div id="custom-modal-icon" class="w-12 h-12 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-2xl mx-auto">
+                <i class="fa-solid fa-circle-info"></i>
+            </div>
+            <h3 id="custom-modal-title" class="font-bold text-lg text-white">Avviso</h3>
+            <p id="custom-modal-text" class="text-sm text-slate-300"></p>
+            <input type="number" id="custom-modal-input" step="0.001" min="0.001" class="hidden w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white font-bold text-center focus:outline-none focus:border-amber-500">
+            <div class="flex gap-2 pt-2">
+                <button id="custom-modal-cancel" class="hidden flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl text-sm transition">
+                    Annulla
+                </button>
+                <button id="custom-modal-confirm" class="flex-1 py-2.5 bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-500 hover:to-amber-500 text-white font-bold rounded-xl text-sm transition shadow-lg">
+                    OK
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- LOGICA MULTIPLAYER P2P E MOTORE TOMBOLA -->
     <script>
         // DIZIONARIO SMORFIA NAPOLETANA
@@ -362,7 +444,6 @@
             const buffer = new ArrayBuffer(44 + pcmData.length * 2);
             const view = new DataView(buffer);
 
-            /* RIFF identifier */
             function writeString(offset, string) {
                 for (let i = 0; i < string.length; i++) {
                     view.setUint8(offset + i, string.charCodeAt(i));
@@ -373,17 +454,16 @@
             view.setUint32(4, 36 + pcmData.length * 2, true);
             writeString(8, 'WAVE');
             writeString(12, 'fmt ');
-            view.setUint32(16, 16, true); // Subchunk1Size (16 for PCM)
-            view.setUint16(20, 1, true);  // AudioFormat (1 for PCM)
-            view.setUint16(22, 1, true);  // NumChannels (1 channel)
-            view.setUint32(24, sampleRate, true); // SampleRate
-            view.setUint32(28, sampleRate * 2, true); // ByteRate
-            view.setUint16(32, 2, true);  // BlockAlign
-            view.setUint16(34, 16, true); // BitsPerSample
+            view.setUint32(16, 16, true);
+            view.setUint16(20, 1, true);
+            view.setUint16(22, 1, true);
+            view.setUint32(24, sampleRate, true);
+            view.setUint32(28, sampleRate * 2, true);
+            view.setUint16(32, 2, true);
+            view.setUint16(34, 16, true);
             writeString(36, 'data');
             view.setUint32(40, pcmData.length * 2, true);
 
-            // Scrittura dei dati PCM 16-bit
             let offset = 44;
             for (let i = 0; i < pcmData.length; i++) {
                 view.setInt16(offset, pcmData[i], true);
@@ -401,7 +481,6 @@
             { id: 'tombola', label: 'Tombola', requiredCount: 15, share: 0.30 }
         ];
 
-        // Formattazione con supporto ai decimali fino a 3 cifre
         function formatMoney(num) {
             const val = Number(num) || 0;
             if (val % 1 === 0) return val.toString() + " €";
@@ -409,7 +488,6 @@
             return val.toFixed(3) + " €";
         }
 
-        // Generazione casuale cartella tombola valida (3 righe x 9 colonne, 5 numeri a riga)
         function generateRandomTicket() {
             const grid = Array(3).fill(null).map(() => Array(9).fill(null));
             const availablePerCol = Array(9).fill(null).map((_, col) => {
@@ -442,8 +520,8 @@
         class TombolaGame {
             constructor() {
                 this.peer = null;
-                this.connections = {}; // Per Host: mappa peerId -> DataConnection
-                this.hostConn = null;  // Per Ospite: DataConnection verso l'Host
+                this.connections = {};
+                this.hostConn = null;
                 
                 this.userId = 'usr-' + Math.random().toString(36).substring(2, 9);
                 this.roomId = null;
@@ -456,11 +534,11 @@
                 this.balance = 10;
                 
                 this.myTickets = [];
-                this.markedNumbers = new Set(); // Usato per modalità Auto o Manuale condivisa
-                this.ticketMarkedSets = []; // Usato per modalità Manuale su singola cartella
+                this.markedNumbers = new Set();
+                this.ticketMarkedSets = [];
                 this.extractedNumbers = [];
-                this.autoMarkMode = true; // true = Automatico, false = Manuale tradizionale
-                this.syncManualMarks = true; // true = Segna su tutte le cartelle, false = Solo su quella cliccata
+                this.autoMarkMode = true;
+                this.syncManualMarks = true;
                 this.autoIntervalId = null;
                 this.autoSpeed = 5000;
 
@@ -477,7 +555,6 @@
                 this.renderTabelloneGrid();
             }
 
-            // Helper per modali eleganti al posto di alert() e prompt()
             showModal({ title = "Avviso", text = "", icon = "fa-circle-info", isPrompt = false, isConfirm = false, defaultVal = "10" }) {
                 return new Promise((resolve) => {
                     const modal = document.getElementById('custom-modal');
@@ -598,56 +675,102 @@
                 }
             }
 
-            // INIZIALIZZAZIONE RETE PER L'HOST (DIVENTA IL SERVER DELLA STANZA)
+            // INIZIALIZZAZIONE RETE PER L'HOST (CON FALLBACK AUTOMATICO PER CANVAS)
             initHostNetwork() {
-                const peerId = `tombola-ita-${this.roomId}`;
-                this.peer = new Peer(peerId);
+                this.roomData = {
+                    roomId: this.roomId,
+                    extractedNumbers: [],
+                    prizesWon: {},
+                    totalPot: 0,
+                    ticketCost: this.ticketCost,
+                    initialBudget: this.initialBudget,
+                    players: {
+                        [this.userId]: { name: this.playerName, balance: this.balance, status: 'approved' }
+                    },
+                    pendingRequests: {}
+                };
 
-                this.peer.on('open', () => {
-                    this.roomData = {
-                        roomId: this.roomId,
-                        extractedNumbers: [],
-                        prizesWon: {},
-                        totalPot: 0,
-                        ticketCost: this.ticketCost,
-                        initialBudget: this.initialBudget,
-                        players: {
-                            [this.userId]: { name: this.playerName, balance: this.balance, status: 'approved' }
-                        },
-                        pendingRequests: {}
-                    };
+                try {
+                    const peerId = `tombola-ita-${this.roomId}`;
+                    this.peer = new Peer(peerId);
 
-                    this.setupTopBar();
-                    document.getElementById('screen-lobby').classList.add('hidden');
-                    document.getElementById('screen-game').classList.remove('hidden');
-                    this.renderPrizeList();
-                    this.renderPlayersListUI();
-                    this.updateLastFiveUI();
-                });
-
-                this.peer.on('connection', (conn) => {
-                    conn.on('data', (msg) => {
-                        this.handleHostMessage(conn, msg);
+                    this.peer.on('open', () => {
+                        this.enterHostGameScreen();
                     });
 
-                    conn.on('close', () => {
-                        // Rimuove connessioni chiuse
-                        Object.keys(this.connections).forEach(uid => {
-                            if (this.connections[uid] === conn) delete this.connections[uid];
+                    this.peer.on('connection', (conn) => {
+                        conn.on('data', (msg) => {
+                            this.handleHostMessage(conn, msg);
+                        });
+
+                        conn.on('close', () => {
+                            Object.keys(this.connections).forEach(uid => {
+                                if (this.connections[uid] === conn) delete this.connections[uid];
+                            });
                         });
                     });
-                });
 
-                this.peer.on('error', async (err) => {
-                    console.error("Errore rete Host:", err);
-                    await this.showModal({ title: "Errore Rete", text: "Impossibile creare la stanza online. Riprova tra qualche secondo.", icon: "fa-wifi" });
-                    const btnSubmit = document.getElementById('btn-lobby-action');
-                    btnSubmit.disabled = false;
-                    btnSubmit.innerText = "Crea Nuova Stanza";
-                });
+                    this.peer.on('error', (err) => {
+                        console.warn("Fallback locale attivato per Host:", err);
+                        this.setupLocalBroadcastHost();
+                    });
+                } catch (e) {
+                    console.warn("WebSocket non consentito in questo ambiente, uso BroadcastChannel:", e);
+                    this.setupLocalBroadcastHost();
+                }
             }
 
-            // GESTIONE MESSAGGI IN ARRIVO ALL'HOST DAGLI OSPITI
+            enterHostGameScreen() {
+                this.setupTopBar();
+                document.getElementById('screen-lobby').classList.add('hidden');
+                document.getElementById('screen-game').classList.remove('hidden');
+                this.renderPrizeList();
+                this.renderPlayersListUI();
+                this.updateLastFiveUI();
+            }
+
+            setupLocalBroadcastHost() {
+                this.isLocalMode = true;
+                if ('BroadcastChannel' in window) {
+                    this.bc = new BroadcastChannel(`tombola-room-${this.roomId}`);
+                    this.bc.onmessage = (ev) => {
+                        const msg = ev.data;
+                        if (!msg) return;
+                        if (msg.type === 'JOIN_REQUEST') {
+                            this.roomData.pendingRequests[msg.userId] = { name: msg.name, timestamp: Date.now() };
+                            this.roomData.players[msg.userId] = {
+                                name: msg.name,
+                                balance: this.roomData.initialBudget,
+                                status: 'pending'
+                            };
+                            this.renderPendingRequestsUI(this.roomData.pendingRequests);
+                        } else if (msg.type === 'UPDATE_POT_AND_PLAYER') {
+                            if (this.roomData.players[msg.userId]) {
+                                this.roomData.players[msg.userId].balance = msg.balance;
+                            }
+                            if (msg.potAddition) {
+                                this.roomData.totalPot = (this.roomData.totalPot || 0) + msg.potAddition;
+                            }
+                            this.broadcastState();
+                        } else if (msg.type === 'CLAIM_PRIZE') {
+                            if (!this.roomData.prizesWon[msg.prizeId]) {
+                                this.roomData.prizesWon[msg.prizeId] = {
+                                    userId: msg.userId,
+                                    playerName: msg.playerName,
+                                    amount: msg.amount
+                                };
+                                if (this.roomData.players[msg.userId]) {
+                                    this.roomData.players[msg.userId].balance += msg.amount;
+                                }
+                                this.stopAutoDraw();
+                                this.broadcastState();
+                            }
+                        }
+                    };
+                }
+                this.enterHostGameScreen();
+            }
+
             handleHostMessage(conn, msg) {
                 if (msg.type === 'JOIN_REQUEST') {
                     const { userId, name } = msg;
@@ -686,7 +809,6 @@
                 }
             }
 
-            // INVIA LO STATO AGGIORNATO A TUTTI GLI OSPITI CONNESSI
             broadcastState() {
                 this.renderPrizeList();
                 this.renderPlayersListUI();
@@ -697,80 +819,60 @@
                         conn.send({ type: 'SYNC_STATE', roomData: this.roomData });
                     }
                 });
+
+                if (this.bc) {
+                    this.bc.postMessage({ type: 'SYNC_STATE', roomData: this.roomData });
+                }
             }
 
-            // INIZIALIZZAZIONE RETE PER GLI OSPITI
             initGuestNetwork() {
-                this.peer = new Peer();
+                try {
+                    this.peer = new Peer();
 
-                this.peer.on('open', () => {
-                    const hostPeerId = `tombola-ita-${this.roomId}`;
-                    this.hostConn = this.peer.connect(hostPeerId, { reliable: true });
+                    this.peer.on('open', () => {
+                        const hostPeerId = `tombola-ita-${this.roomId}`;
+                        this.hostConn = this.peer.connect(hostPeerId, { reliable: true });
 
-                    // Timeout di sicurezza se la stanza non esiste
-                    const connTimeout = setTimeout(async () => {
-                        if (!this.hostConn || !this.hostConn.open) {
-                            await this.showModal({ 
-                                title: "Stanza Non Trovata", 
-                                text: `Nessuna stanza attiva trovata con il codice "${this.roomId}". Verifica il codice con l'Host!`, 
-                                icon: "fa-circle-xmark" 
+                        const connTimeout = setTimeout(async () => {
+                            if (!this.hostConn || !this.hostConn.open) {
+                                await this.showModal({ 
+                                    title: "Stanza Non Trovata", 
+                                    text: `Nessuna stanza attiva trovata con il codice "${this.roomId}". Verifica il codice con l'Host!`, 
+                                    icon: "fa-circle-xmark" 
+                                });
+                                this.resetJoinButton();
+                            }
+                        }, 7000);
+
+                        this.hostConn.on('open', () => {
+                            clearTimeout(connTimeout);
+                            const btnSubmit = document.getElementById('btn-lobby-action');
+                            btnSubmit.innerText = "In attesa di approvazione dell'Host...";
+
+                            this.hostConn.send({
+                                type: 'JOIN_REQUEST',
+                                userId: this.userId,
+                                name: this.playerName
                             });
-                            this.resetJoinButton();
-                        }
-                    }, 7000);
+                        });
 
-                    this.hostConn.on('open', () => {
-                        clearTimeout(connTimeout);
-                        const btnSubmit = document.getElementById('btn-lobby-action');
-                        btnSubmit.innerText = "In attesa di approvazione dell'Host...";
+                        this.hostConn.on('data', async (msg) => {
+                            await this.handleGuestIncomingMessage(msg);
+                        });
 
-                        // Invia richiesta di accesso all'Host
-                        this.hostConn.send({
-                            type: 'JOIN_REQUEST',
-                            userId: this.userId,
-                            name: this.playerName
+                        this.hostConn.on('close', async () => {
+                            await this.showModal({ title: "Connessione Persa", text: "L'Host ha chiuso la stanza o si è disconnesso.", icon: "fa-plug-circle-xmark" });
+                            location.reload();
                         });
                     });
 
-                    this.hostConn.on('data', async (msg) => {
-                        if (msg.type === 'APPROVED') {
-                            this.roomData = msg.roomData;
-                            this.initialBudget = Number(this.roomData.initialBudget) || 10;
-                            this.ticketCost = Number(this.roomData.ticketCost) || 0.5;
-                            this.balance = this.initialBudget;
-
-                            this.setupTopBar();
-                            document.getElementById('screen-lobby').classList.add('hidden');
-                            document.getElementById('screen-game').classList.remove('hidden');
-                            this.applySyncedState(this.roomData);
-                        } 
-                        else if (msg.type === 'REJECTED') {
-                            await this.showModal({ title: "Accesso Rifiutato", text: "L'Host non ha accettato la tua richiesta di ingresso.", icon: "fa-ban" });
-                            location.reload();
-                        }
-                        else if (msg.type === 'SYNC_STATE') {
-                            this.applySyncedState(msg.roomData);
-                        }
-                        else if (msg.type === 'NEW_GAME_RESET') {
-                            this.resetLocalGameForNewMatch(msg.roomData);
-                        }
+                    this.peer.on('error', () => {
+                        this.setupLocalBroadcastGuest();
                     });
-
-                    this.hostConn.on('close', async () => {
-                        await this.showModal({ title: "Connessione Persa", text: "L'Host ha chiuso la stanza o si è disconnesso.", icon: "fa-plug-circle-xmark" });
-                        location.reload();
-                    });
-                });
-
-                this.peer.on('error', async (err) => {
-                    console.error("Errore connessione Ospite:", err);
-                    await this.showModal({ 
-                        title: "Stanza Non Trovata", 
-                        text: `Impossibile trovare la stanza "${this.roomId}". Controlla che l'Host l'abbia già creata!`, 
-                        icon: "fa-circle-xmark" 
-                    });
-                    this.resetJoinButton();
-                });
+                } catch (e) {
+                    console.warn("WebSocket non consentito, passo a BroadcastChannel per ospite:", e);
+                    this.setupLocalBroadcastGuest();
+                }
             }
 
             resetJoinButton() {
@@ -781,6 +883,51 @@
                 if (this.peer) {
                     this.peer.destroy();
                     this.peer = null;
+                }
+            }
+
+            setupLocalBroadcastGuest() {
+                this.isLocalMode = true;
+                if ('BroadcastChannel' in window) {
+                    this.bc = new BroadcastChannel(`tombola-room-${this.roomId}`);
+                    const btnSubmit = document.getElementById('btn-lobby-action');
+                    btnSubmit.innerText = "In attesa di approvazione dell'Host...";
+
+                    this.bc.onmessage = async (ev) => {
+                        if (ev.data) {
+                            await this.handleGuestIncomingMessage(ev.data);
+                        }
+                    };
+
+                    this.bc.postMessage({
+                        type: 'JOIN_REQUEST',
+                        userId: this.userId,
+                        name: this.playerName
+                    });
+                }
+            }
+
+            async handleGuestIncomingMessage(msg) {
+                if (msg.type === 'APPROVED' && (!msg.targetUserId || msg.targetUserId === this.userId)) {
+                    this.roomData = msg.roomData;
+                    this.initialBudget = Number(this.roomData.initialBudget) || 10;
+                    this.ticketCost = Number(this.roomData.ticketCost) || 0.5;
+                    this.balance = this.initialBudget;
+
+                    this.setupTopBar();
+                    document.getElementById('screen-lobby').classList.add('hidden');
+                    document.getElementById('screen-game').classList.remove('hidden');
+                    this.applySyncedState(this.roomData);
+                } 
+                else if (msg.type === 'REJECTED' && (!msg.targetUserId || msg.targetUserId === this.userId)) {
+                    await this.showModal({ title: "Accesso Rifiutato", text: "L'Host non ha accettato la tua richiesta di ingresso.", icon: "fa-ban" });
+                    location.reload();
+                }
+                else if (msg.type === 'SYNC_STATE') {
+                    this.applySyncedState(msg.roomData);
+                }
+                else if (msg.type === 'NEW_GAME_RESET') {
+                    this.resetLocalGameForNewMatch(msg.roomData);
                 }
             }
 
@@ -803,7 +950,6 @@
                 if (this.extractedNumbers.length > 0) {
                     const last = this.extractedNumbers[this.extractedNumbers.length - 1];
                     this.updateBallDisplay(last);
-                    // Pronuncia il numero anche sul dispositivo dell'ospite se è appena uscito
                     if (this.extractedNumbers.length > prevLen && this.speechEnabled) {
                         this.speakNumber(last);
                     }
@@ -858,10 +1004,12 @@
 
                 this.renderPendingRequestsUI(this.roomData.pendingRequests);
                 
-                // Notifica direttamente l'ospite che è stato approvato
                 const conn = this.connections[uid];
                 if (conn && conn.open) {
                     conn.send({ type: 'APPROVED', roomData: this.roomData });
+                }
+                if (this.bc) {
+                    this.bc.postMessage({ type: 'APPROVED', targetUserId: uid, roomData: this.roomData });
                 }
 
                 this.broadcastState();
@@ -880,6 +1028,9 @@
                     conn.send({ type: 'REJECTED' });
                     setTimeout(() => conn.close(), 500);
                 }
+                if (this.bc) {
+                    this.bc.postMessage({ type: 'REJECTED', targetUserId: uid });
+                }
                 delete this.connections[uid];
             }
 
@@ -892,12 +1043,54 @@
                 this.renderPendingRequestsUI(this.roomData.pendingRequests);
             }
 
+            renderPrizeList() {
+                const container = document.getElementById('prize-list-container');
+                const potDisplay = document.getElementById('display-total-pot');
+                const pot = this.roomData.totalPot || 0;
+
+                if (potDisplay) potDisplay.innerText = formatMoney(pot);
+                if (!container) return;
+
+                container.innerHTML = "";
+                const prizesWon = this.roomData.prizesWon || {};
+
+                PRIZE_TYPES.forEach(prize => {
+                    const wonInfo = prizesWon[prize.id];
+                    const prizeAmount = pot * prize.share;
+                    const btn = document.createElement('button');
+
+                    if (wonInfo) {
+                        btn.disabled = true;
+                        btn.className = "p-1.5 md:p-2 rounded-xl border border-emerald-500/40 bg-emerald-950/60 text-left flex flex-col justify-between opacity-90";
+                        btn.innerHTML = `
+                            <div class="flex items-center justify-between w-full">
+                                <span class="text-[10px] md:text-xs font-extrabold uppercase text-emerald-300">${prize.label}</span>
+                                <i class="fa-solid fa-check-circle text-emerald-400 text-xs"></i>
+                            </div>
+                            <span class="text-[10px] font-bold text-white truncate w-full">${wonInfo.playerName}</span>
+                            <span class="text-[10px] font-mono text-emerald-400">${formatMoney(wonInfo.amount)}</span>
+                        `;
+                    } else {
+                        btn.onclick = () => this.claimPrize(prize.id);
+                        btn.className = "p-1.5 md:p-2 rounded-xl border border-slate-700 bg-slate-800/80 hover:border-amber-500 hover:bg-slate-800 text-left flex flex-col justify-between transition active:scale-95 cursor-pointer";
+                        btn.innerHTML = `
+                            <div class="flex items-center justify-between w-full">
+                                <span class="text-[10px] md:text-xs font-extrabold uppercase text-amber-300">${prize.label}</span>
+                            </div>
+                            <span class="text-xs md:text-sm font-black text-white">${formatMoney(prizeAmount)}</span>
+                            <span class="text-[9px] text-slate-400 uppercase tracking-wider">Riscuoti</span>
+                        `;
+                    }
+
+                    container.appendChild(btn);
+                });
+            }
+
             renderTabelloneGrid() {
                 const container = document.getElementById('tabellone-schede-container');
                 if (!container) return;
                 container.innerHTML = "";
 
-                // 6 schede tradizionali da 15 numeri ciascuna (totale 90 numeri)
                 for (let s = 0; s < 6; s++) {
                     const cardEl = document.createElement('div');
                     cardEl.className = "glass-panel p-2.5 rounded-xl border border-slate-800 bg-slate-900/60 shadow-lg";
@@ -1042,7 +1235,6 @@
                                     ? this.markedNumbers.has(val)
                                     : this.ticketMarkedSets[idx].has(val);
                                 const isExtracted = this.extractedNumbers.includes(val);
-                                // In modalità manuale NON diamo suggerimenti visivi sui numeri estratti non ancora segnati
                                 const hintClass = (this.autoMarkMode && isExtracted) ? 'border-amber-400/80 text-amber-300 animate-pulse' : '';
                                 const markedClass = isMarked ? 'marked' : hintClass;
 
@@ -1087,12 +1279,10 @@
                 if (!btn) return;
 
                 if (this.syncManualMarks) {
-                    // Sincronizza tutte le marcature individuali nel set globale
                     this.ticketMarkedSets.forEach(s => s.forEach(num => this.markedNumbers.add(num)));
                     btn.className = "px-2.5 py-1 rounded-lg bg-sky-600/20 border border-sky-500/40 text-sky-300 hover:bg-sky-600/30 text-xs font-bold flex items-center gap-1.5 transition";
                     btn.innerHTML = `<i class="fa-solid fa-copy"></i> <span id="sync-marks-label">Tutte le Cartelle</span>`;
                 } else {
-                    // Copia lo stato attuale in ogni singolo set cartella
                     this.myTickets.forEach((tkt, idx) => {
                         this.ticketMarkedSets[idx] = new Set();
                         for (let r = 0; r < 3; r++) {
@@ -1153,6 +1343,9 @@
                     viewMyCards.classList.remove('hidden');
                     btnMyCards.className = "pb-2.5 text-sm font-bold border-b-2 border-red-500 text-red-400 flex items-center gap-2";
                     btnTabellone.className = "pb-2.5 text-sm font-bold border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-2";
+                }
+            }
+
             checkTicketProgress(ticket, ticketIdx = 0) {
                 let maxRowMarked = 0;
                 let totalMarked = 0;
@@ -1184,13 +1377,15 @@
                         this.roomData.players[this.userId].balance = this.balance;
                     }
                     this.broadcastState();
-                } else if (this.hostConn && this.hostConn.open) {
-                    this.hostConn.send({
+                } else {
+                    const payload = {
                         type: 'UPDATE_POT_AND_PLAYER',
                         userId: this.userId,
                         balance: this.balance,
                         potAddition
-                    });
+                    };
+                    if (this.hostConn && this.hostConn.open) this.hostConn.send(payload);
+                    if (this.bc) this.bc.postMessage(payload);
                 }
             }
 
@@ -1200,13 +1395,15 @@
                         this.roomData.players[this.userId].balance = this.balance;
                     }
                     this.broadcastState();
-                } else if (this.hostConn && this.hostConn.open) {
-                    this.hostConn.send({
+                } else {
+                    const payload = {
                         type: 'UPDATE_POT_AND_PLAYER',
                         userId: this.userId,
                         balance: this.balance,
                         potAddition: 0
-                    });
+                    };
+                    if (this.hostConn && this.hostConn.open) this.hostConn.send(payload);
+                    if (this.bc) this.bc.postMessage(payload);
                 }
             }
 
@@ -1288,6 +1485,9 @@
                         conn.send({ type: 'NEW_GAME_RESET', roomData: this.roomData });
                     }
                 });
+                if (this.bc) {
+                    this.bc.postMessage({ type: 'NEW_GAME_RESET', roomData: this.roomData });
+                }
             }
 
             resetLocalGameForNewMatch(newRoomData) {
@@ -1304,30 +1504,6 @@
                 this.renderPrizeList();
                 this.renderMyTicketsUI();
                 this.renderPlayersListUI();
-            }
-            }
-
-            toggleAutoDraw() {
-                const btn = document.getElementById('btn-draw-auto');
-                if (this.autoIntervalId) {
-                    this.stopAutoDraw();
-                    btn.innerHTML = `<i class="fa-solid fa-play"></i> Auto Play`;
-                    btn.classList.remove('bg-amber-600', 'text-white');
-                    btn.classList.add('bg-slate-800', 'text-amber-400');
-                } else {
-                    this.drawNextNumber();
-                    this.autoIntervalId = setInterval(() => this.drawNextNumber(), this.autoSpeed);
-                    btn.innerHTML = `<i class="fa-solid fa-pause"></i> Pausa`;
-                    btn.classList.remove('bg-slate-800', 'text-amber-400');
-                    btn.classList.add('bg-amber-600', 'text-white');
-                }
-            }
-
-            stopAutoDraw() {
-                if (this.autoIntervalId) {
-                    clearInterval(this.autoIntervalId);
-                    this.autoIntervalId = null;
-                }
             }
 
             changeSpeed(val) {
@@ -1350,7 +1526,6 @@
                 const smorfiaText = SMORFIA[num] || '';
                 const textPrompt = `Leggi in italiano con tono caldo, espressivo e naturale da presentatore della tombola napoletana: "Numero ${num}... ${smorfiaText}!"`;
 
-                // 1. Tentativo con Gemini Native TTS (voce Aoede / naturale stile Gemini) con retry
                 const apiKey = ""; 
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
                 const payload = {
@@ -1406,7 +1581,6 @@
                     }
                 }
 
-                // 2. Fallback di alta qualità (se offline o su Vercel senza API key): seleziona le voci neurali/naturali italiane del dispositivo
                 if ('speechSynthesis' in window) {
                     window.speechSynthesis.cancel();
                     const text = `Numero ${num}. ${smorfiaText}`;
@@ -1417,7 +1591,6 @@
 
                     const voices = window.speechSynthesis.getVoices();
                     const itVoices = voices.filter(v => v.lang.toLowerCase().includes('it'));
-                    // Priorità alle voci Natural / Neural / Google / Microsoft Isabella/Elsa
                     const bestVoice = 
                         itVoices.find(v => /natural|neural|google|isabella|elsa|alice|federica/i.test(v.name)) ||
                         itVoices[0];
@@ -1483,15 +1656,17 @@
                         this.roomData.players[this.userId].balance = this.balance;
                     }
                     this.broadcastState();
-                } else if (this.hostConn && this.hostConn.open) {
+                } else {
                     this.balance += prizeVal;
-                    this.hostConn.send({
+                    const payload = {
                         type: 'CLAIM_PRIZE',
                         userId: this.userId,
                         playerName: this.playerName,
                         prizeId,
                         amount: prizeVal
-                    });
+                    };
+                    if (this.hostConn && this.hostConn.open) this.hostConn.send(payload);
+                    if (this.bc) this.bc.postMessage(payload);
                 }
 
                 document.getElementById('player-balance-tag').innerText = formatMoney(this.balance);
@@ -1570,7 +1745,9 @@
             }
         }
 
-        window.tombolaApp = new TombolaGame();
+        window.addEventListener('DOMContentLoaded', () => {
+            window.tombolaApp = new TombolaGame();
+        });
     </script>
 </body>
 </html>
